@@ -1,0 +1,9 @@
+[package]
+name = "chat_service"
+version = "0.1.0"
+authors = ["kibbles"]
+
+[dependencies]
+mio = "0.5.*"
+http-muncher = "0.2.*"
+
