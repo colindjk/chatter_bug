@@ -1,5 +1,12 @@
 extern crate http_muncher;
+use http_muncher::{ Parser, ParserHandler };
+
+use mio::*;
+use mio::tcp::*;
+use std::net::SocketAddr;
 use std::collections::HashMap;
+
+use server::*;
 
 struct HttpParser;
 impl ParserHandler for HttpParser {  }
@@ -12,7 +19,7 @@ pub struct WebSocketClient {
 impl WebSocketClient {
     fn read(&mut self) {
         loop {
-            let mut buf = [0; 2048];
+            let mut buf = [0 as u8; 2048];
             match self.socket.try_read(&buf) {
                 Err(e) => {
                     println!("Error reading socket number {:?}", e);
