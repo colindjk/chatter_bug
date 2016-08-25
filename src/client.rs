@@ -20,7 +20,7 @@ impl WebSocketClient {
     fn read(&mut self) {
         loop {
             let mut buf = [0 as u8; 2048];
-            match self.socket.try_read(&buf) {
+            match self.socket.try_read(&mut buf) {
                 Err(e) => {
                     println!("Error reading socket number {:?}", e);
                     return
@@ -36,7 +36,7 @@ impl WebSocketClient {
         }
     }
 
-    fn new(socket: TcpStream) -> WebSocketClient {
+    pub fn new(socket: TcpStream) -> WebSocketClient {
         WebSocketClient {
             socket: socket,
             http_parser: Parser::request(HttpParser)

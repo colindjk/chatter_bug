@@ -1,6 +1,5 @@
 extern crate mio;
 
-//use std::net::SocketAddr;
 use mio::tcp::*;
 use mio::*;
 
@@ -53,19 +52,19 @@ impl Handler for WebSocketServer {
                 self.token_counter += 1;
                 let new_token = Token(self.token_counter);
 
-                self.clients.insert(new_token, WebSocketClient::new(client_socket));
-                event_loop.register(&self.clients[&new_token],
+                self.clients.insert(new_token, client_socket);
+                event_loop.register(&self.clients[&new_token], // wowzers in me trousers. Hashmaps!
                                     new_token, EventSet::readable(),
                                     PollOpt::edge() | PollOpt::oneshot()).unwrap();
-            }
-            token => {
-                let mut client = self.clients.get_mut(&token).unwrap();
-                client.read();
-                event_loop.reregister(&client.socket, token, EventSet::unreachable(),
-                                      PollOpt::edge() | PollOpt::oneshot()).unwrap();
             }
             _ => panic!(),
         }
     }
 }
 
+//token => {
+    //let mut client = self.clients.get_mut(&token).unwrap();
+    //client.read();
+    //event_loop.reregister(&client.socket, token, EventSet::unreachable(),
+                          //PollOpt::edge() | PollOpt::oneshot()).unwrap();
+//}
