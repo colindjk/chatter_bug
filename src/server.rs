@@ -57,6 +57,13 @@ impl Handler for WebSocketServer {
                                     new_token, EventSet::readable(),
                                     PollOpt::edge() | PollOpt::oneshot()).unwrap();
             }
+            token => {
+                let mut client = self.clients.get_mut(&token.unwrap());
+                client.read();
+                event_loop.reregister(&client.socket, token, 
+                                      client.interest,
+                                      PollOpt::edge() | PollOpt::oneshot()).unwrap();
+            }
             _ => panic!(),
         }
     }
@@ -65,6 +72,6 @@ impl Handler for WebSocketServer {
 //token => {
     //let mut client = self.clients.get_mut(&token).unwrap();
     //client.read();
-    //event_loop.reregister(&client.socket, token, EventSet::unreachable(),
+    //event_loop.reregister(&client.socket, token, EventSet::readable(),
                           //PollOpt::edge() | PollOpt::oneshot()).unwrap();
 //}
