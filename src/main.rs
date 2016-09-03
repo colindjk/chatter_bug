@@ -1,5 +1,7 @@
 extern crate mio;
 extern crate http_muncher;
+extern crate sha1;
+extern crate rustc_serialize;
 
 use mio::*;
 use mio::tcp::*;
@@ -8,6 +10,7 @@ use std::collections::HashMap;
 
 mod server;
 mod client;
+mod serializer;
 
 fn main() {
     // Note: unwrap() for Option::Some

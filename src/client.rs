@@ -5,11 +5,14 @@ use mio::*;
 use mio::tcp::*;
 use std::net::SocketAddr;
 use std::collections::HashMap;
+use std::fmt;
 
+use std::str;
 use std::cell::RefCell;
 use std::rc::Rc;
 
 use server::*;
+use serializer::*;
 
 struct HttpParser {
     current_key: Option<String>,
@@ -19,14 +22,14 @@ struct HttpParser {
 impl ParserHandler for HttpParser {
 
     fn on_header_field(&mut self, s: &[u8]) -> bool {
-        self.current_key = Some(std::str::from_utf8(s).unwrap().to_string());
+        self.current_key = Some(str::from_utf8(s).unwrap().to_string());
         true
     }
 
     fn on_header_value(&mut self, s: &[u8]) -> bool {
         self.headers.borrow_mut()
             .insert(self.current_key.clone().unwrap(),
-                    std::str::from_utf8(s).unwrap().to_string());
+                    str::from_utf8(s).unwrap().to_string());
         true
     }
 
@@ -36,11 +39,12 @@ impl ParserHandler for HttpParser {
 }
 
 pub struct WebSocketClient {
-    socket: TcpStream,
+    pub socket: TcpStream,
+    pub interest: EventSet,
+
     http_parser: Parser<HttpParser>,
     headers: Rc<RefCell<HashMap<String, String>>>,
 
-    interest: EventSet,
     state: ClientState,
 }
 
@@ -54,7 +58,7 @@ enum ClientState {
 
 
 impl WebSocketClient {
-    fn read(&mut self) {
+    pub fn read(&mut self) {
         loop {
             let mut buf = [0 as u8; 2048];
             match self.socket.try_read(&mut buf) {
@@ -64,7 +68,8 @@ impl WebSocketClient {
                 }
                 Ok(None) => break, // out of bytes
                 Ok(Some(len)) => {
-                    self.http_parser.parse(&buf[0..len]);
+                    //self.http_parser.parse(&buf[0..len]);
+
                     self.state = ClientState::HandshakeResponse;
                     self.interest.remove(EventSet::readable());
                     self.interest.insert(EventSet::writable());
@@ -72,6 +77,27 @@ impl WebSocketClient {
                 }
             }
         }
+    }
+
+    pub fn write(&mut self) {
+        let headers = self.headers.borrow();
+
+        let response_key = gen_key(&headers.get("Sec-WebSocket-Key").unwrap());
+
+        let response = fmt::format(format_args!("HTTP/1.1 101 Switching Protocols\r\n\
+                                                 Connection: Upgrade\r\n\
+                                                 Sec-WebSocket-Accept: {}\r\n\
+                                                 Upgrade: websocket\r\n\r\n\
+                                                ", response_key));
+
+        self.socket.try_write(response.as_bytes()).unwrap();
+
+        // Change the 'state'
+        self.state = ClientState::Connected;
+
+        // And change the interest back to readable, as it should be post-write
+        self.interest.remove(EventSet::writable());
+        self.interest.insert(EventSet::readable());
     }
 
     pub fn new(socket: TcpStream) -> WebSocketClient {
@@ -88,12 +114,22 @@ impl WebSocketClient {
                 // to write new headers
                 headers: headers.clone()
             }),
+
             // Initial events
             interest: EventSet::readable(),
             // initial state of a client is awaiting handshake
             state: ClientState::AwaitingHandshake
         }
     }
+
+    //pub fn get_socket(&self) -> &TcpStream {
+        //&self.socket
+    //}
+
+    //pub fn get_interest(&self) -> &EventSet {
+        //&self.interest
+    //}
+
 }
 
 //if self.http_parser.is_upgrade() {
